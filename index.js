@@ -2,7 +2,7 @@ const MESG = require('mesg-js').application()
 
 MESG.whenEvent({
   serviceID: 'ethereum-erc20',
-  filter: 'transfer'
+  eventKey: 'transfer'
 }, {
   serviceID: 'influxdb',
   taskKey: 'write',
