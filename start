@@ -1,0 +1,6 @@
+#!/bin/bash
+
+mesg-core service start ethereum-erc20
+mesg-core service start influxdb
+
+npm run start
