@@ -1,0 +1,41 @@
+name: Erc20-analytics
+steps:
+  - type: trigger
+    instance:
+      src: https://github.com/mesg-foundation/service-ethereum-erc20
+      env:
+        - PROVIDER_ENDPOINT=$(env:PROVIDER_ENDPOINT)
+    eventKey: transfer
+  - type: task
+    key: transfer-data
+    instance:
+      src: https://github.com/mesg-foundation/service-js-function
+    taskKey: execute
+    inputs:
+      code: >
+        module.exports=(transferData) => ({
+          blockNumber: transferData.blockNumber,
+          from: transferData.from,
+          to: transferData.to,
+          value: parseFloat(transferData.value),
+          contractAddress: transferData.contractAddress
+        })
+      inputs:
+        blockNumber: { key: blockNumber }
+        contractAddress: { key: contractAddress }
+        from: { key: from }
+        to: { key: to }
+        value: { key: value }
+  - type: task
+    instance:
+      src: https://github.com/mesg-foundation/service-influxdb
+    taskKey: write
+    inputs:
+      measurement: 'transfer'
+      tags:
+        block: { key: result.blockNumber }
+        address: { key: result.contractAddress }
+        from: { key: result.from }
+        to: { key: result.to }
+      fields:
+        value: { key: result.value }
