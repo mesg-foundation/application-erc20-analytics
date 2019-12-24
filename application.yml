@@ -5,7 +5,6 @@ steps:
       src: https://github.com/mesg-foundation/service-ethereum-erc20
       env:
         - PROVIDER_ENDPOINT=$(env:PROVIDER_ENDPOINT)
-        - CONTRACT_ADDRESS=
     eventKey: transfer
   - type: task
     key: transfer-data
@@ -16,7 +15,6 @@ steps:
       code: >
         module.exports=(transferData) => ({
           blockNumber: transferData.blockNumber,
-          transactionHash: transferData.transactionHash,
           from: transferData.from,
           to: transferData.to,
           value: parseFloat(transferData.value),
