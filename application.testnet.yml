@@ -1,0 +1,60 @@
+name: Erc20-analytics
+steps:
+  - type: trigger
+    instanceHash: 4UeeVvVUtEVfiYWZAPEzfJgqAoruEEETf92fqipD4q8w
+    eventKey: log
+  - type: filter
+    conditions:
+      # web3.eth.abi.encodeEventSignature({
+      #   "anonymous":false,
+      #   "inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],
+      #   "name":"Transfer",
+      #   "type":"event"
+      # }) == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+      eventSignature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+  - type: task
+    key: result
+    instanceHash: 4UeeVvVUtEVfiYWZAPEzfJgqAoruEEETf92fqipD4q8w
+    taskKey: decodeLog
+    inputs:
+      eventAbi:
+        anonymous: false
+        inputs:
+          - indexed: true
+            name: from
+            type: address
+          - indexed: true
+            name: to
+            type: address
+          - indexed: false
+            name: value
+            type: uint256
+        name: Transfer
+        type: event
+      data: { key: data }
+      topics: { key: topics }
+      address: { key: address }
+      logIndex: { key: logIndex }
+      transactionHash: { key: transactionHash }
+      transactionIndex: { key: transactionIndex }
+      blockHash: { key: blockHash }
+      blockNumber: { key: blockNumber }
+  - type: task
+    key: floatValue
+    instanceHash: 5BS84ytWPqhKzkEiH94hUs5udWzCkN1dZNw7VaqiJC1q
+    taskKey: execute
+    inputs:
+      code: "module.exports = parseFloat"
+      inputs: { key: decodedData.value }
+  - type: task
+    instanceHash: 8sYvgq4TqzZo7cdyMqR7fYKbUvvhXbecMcSBcBjjuYSF
+    taskKey: write
+    inputs:
+      measurement: "transfer"
+      tags:
+        block: { key: blockNumber, stepKey: result }
+        address: { key: address, stepKey: result }
+        from: { key: decodedData.from, stepKey: result }
+        to: { key: decodedData.to, stepKey: result }
+      fields:
+        value: { key: result, stepKey: floatValue }
