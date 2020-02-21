@@ -1,41 +1,65 @@
 name: Erc20-analytics
 steps:
   - type: trigger
-    instance:
-      src: https://github.com/mesg-foundation/service-ethereum-erc20
+    instance: &ethereum
+      src: https://github.com/mesg-foundation/service-ethereum
       env:
         - PROVIDER_ENDPOINT=$(env:PROVIDER_ENDPOINT)
-    eventKey: transfer
+    eventKey: log
+  - type: filter
+    conditions:
+      # web3.eth.abi.encodeEventSignature({
+      #   "anonymous":false,
+      #   "inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],
+      #   "name":"Transfer",
+      #   "type":"event"
+      # }) == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+      eventSignature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
   - type: task
-    key: transfer-data
+    key: result
+    instance: *ethereum
+    taskKey: decodeLog
+    inputs:
+      eventAbi:
+        anonymous: false
+        inputs:
+          - indexed: true
+            name: from
+            type: address
+          - indexed: true
+            name: to
+            type: address
+          - indexed: false
+            name: value
+            type: uint256
+        name: Transfer
+        type: event
+      data: { key: data }
+      topics: { key: topics }
+      address: { key: address }
+      logIndex: { key: logIndex }
+      transactionHash: { key: transactionHash }
+      transactionIndex: { key: transactionIndex }
+      blockHash: { key: blockHash }
+      blockNumber: { key: blockNumber }
+  - type: task
+    key: floatValue
     instance:
       src: https://github.com/mesg-foundation/service-js-function
     taskKey: execute
     inputs:
-      code: >
-        module.exports=(transferData) => ({
-          blockNumber: transferData.blockNumber,
-          from: transferData.from,
-          to: transferData.to,
-          value: parseFloat(transferData.value),
-          contractAddress: transferData.contractAddress
-        })
-      inputs:
-        blockNumber: { key: blockNumber }
-        contractAddress: { key: contractAddress }
-        from: { key: from }
-        to: { key: to }
-        value: { key: value }
+      code: "module.exports = parseFloat"
+      inputs: { key: decodedData.value }
   - type: task
     instance:
       src: https://github.com/mesg-foundation/service-influxdb
     taskKey: write
     inputs:
-      measurement: 'transfer'
+      measurement: "transfer"
       tags:
-        block: { key: result.blockNumber }
-        address: { key: result.contractAddress }
-        from: { key: result.from }
-        to: { key: result.to }
+        block: { key: blockNumber, stepKey: result }
+        address: { key: address, stepKey: result }
+        from: { key: decodedData.from, stepKey: result }
+        to: { key: decodedData.to, stepKey: result }
       fields:
-        value: { key: result.value }
+        value: { key: result, stepKey: floatValue }
